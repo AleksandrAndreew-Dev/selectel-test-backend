@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+
 from app.crud.vacancy import (
     create_vacancy,
     delete_vacancy,
@@ -14,6 +15,10 @@ from app.crud.vacancy import (
 )
 from app.db.session import async_session_maker
 from app.schemas.vacancy import VacancyCreate, VacancyRead, VacancyUpdate
+
+
+
+from sqlalchemy.future import select
 
 router = APIRouter(prefix="/vacancies", tags=["vacancies"])
 
@@ -55,19 +60,43 @@ async def get_vacancy_endpoint(
     return vacancy
 
 
+# @router.post("/", response_model=VacancyRead, status_code=status.HTTP_201_CREATED)
+# async def create_vacancy_endpoint(
+#     payload: VacancyCreate, session: AsyncSession = Depends(get_session)
+# ) -> VacancyRead:
+#     if payload.external_id is not None:
+#         existing = await get_vacancy_by_external_id(session, payload.external_id)
+#         if existing:
+#             return JSONResponse(
+#                 status_code=status.HTTP_200_OK,
+#                 content={"detail": "Vacancy with external_id already exists"},
+#             )
+#     return await create_vacancy(session, payload)
+
+
+
 @router.post("/", response_model=VacancyRead, status_code=status.HTTP_201_CREATED)
-async def create_vacancy_endpoint(
-    payload: VacancyCreate, session: AsyncSession = Depends(get_session)
-) -> VacancyRead:
+async def create_vacancy_endpoint(payload: VacancyCreate, session: AsyncSession = Depends(get_session)) -> VacancyRead:
     if payload.external_id is not None:
         existing = await get_vacancy_by_external_id(session, payload.external_id)
         if existing:
-            return JSONResponse(
-                status_code=status.HTTP_200_OK,
-                content={"detail": "Vacancy with external_id already exists"},
-            )
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Vacancy with external_id already exists")
     return await create_vacancy(session, payload)
 
+
+
+
+
+# @router.put("/{vacancy_id}", response_model=VacancyRead, status_code=status.HTTP_200_OK)
+# async def update_vacancy_endpoint(
+#     vacancy_id: int,
+#     payload: VacancyUpdate,
+#     session: AsyncSession = Depends(get_session),
+# ) -> VacancyRead:
+#     vacancy = await get_vacancy(session, vacancy_id)
+#     if not vacancy:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+#     return await update_vacancy(session, vacancy, payload)
 
 
 
@@ -77,11 +106,25 @@ async def update_vacancy_endpoint(
     payload: VacancyUpdate,
     session: AsyncSession = Depends(get_session),
 ) -> VacancyRead:
+    # 1. Проверяем существование обновляемой вакансии
     vacancy = await get_vacancy(session, vacancy_id)
     if not vacancy:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
-    return await update_vacancy(session, vacancy, payload)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vacancy not found")
 
+    # 2. Проверка уникальности external_id
+    # Проверяем только если external_id передан в теле запроса и он отличается от текущего
+    if payload.external_id is not None and payload.external_id != vacancy.external_id:
+        
+        existing_conflict = await get_vacancy_by_external_id(session, payload.external_id)
+
+        if existing_conflict:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, # 409 логичнее для конфликта данных, чем 400
+                detail=f"Vacancy with external_id '{payload.external_id}' already exists."
+            )
+
+    # 3. Обновляем вакансию
+    return await update_vacancy(session, vacancy, payload)
 
 @router.delete("/{vacancy_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_vacancy_endpoint(

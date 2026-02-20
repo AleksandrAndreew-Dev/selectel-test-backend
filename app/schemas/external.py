@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, field_validator
 
 
 class ExternalCity(BaseModel):
@@ -30,11 +30,17 @@ class ExternalVacancyItem(BaseModel):
     is_remote_available: bool
     is_hot: bool
 
-    model_config = ConfigDict(
-        json_encoders={
-            datetime: lambda dt: dt.strftime('%Y-%m-%d %H:%M:%S')
-        }
-    )
+    @field_validator("published_at", mode="before")
+    @classmethod
+    def ensure_utc(cls, v):
+        """Приводит дату из внешнего API к UTC."""
+        if v is None:
+            return v
+        if isinstance(v, str):
+            v = datetime.fromisoformat(v.replace("Z", "+00:00"))
+        if v.tzinfo is None:
+            return v.replace(tzinfo=timezone.utc)
+        return v.astimezone(timezone.utc)
 
 
 

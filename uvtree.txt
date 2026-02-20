@@ -38,7 +38,6 @@ selectel v0.1.0
 │   ├── pydantic v2.12.5 (*)
 │   ├── python-dotenv v1.2.1
 │   └── typing-inspection v0.4.2 (*)
-├── python-version v0.0.2
 ├── sqlalchemy v2.0.46 (*)
 └── uvicorn[standard] v0.41.0
     ├── click v8.3.1
