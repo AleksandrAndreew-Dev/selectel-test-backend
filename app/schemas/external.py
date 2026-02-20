@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class ExternalCity(BaseModel):
@@ -29,6 +29,13 @@ class ExternalVacancyItem(BaseModel):
     published_at: datetime
     is_remote_available: bool
     is_hot: bool
+
+    model_config = ConfigDict(
+        json_encoders={
+            datetime: lambda dt: dt.strftime('%Y-%m-%d %H:%M:%S')
+        }
+    )
+
 
 
 class ExternalVacanciesResponse(BaseModel):

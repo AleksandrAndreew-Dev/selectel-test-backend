@@ -23,13 +23,26 @@ async def get_session() -> AsyncSession:
         yield session
 
 
+# @router.get("/", response_model=List[VacancyRead])
+# async def list_vacancies_endpoint(
+#     timetable_mode_name: Optional[str] = None,
+#     city_name: Optional[str] = None,
+#     session: AsyncSession = Depends(get_session),
+# ) -> List[VacancyRead]:
+#     return await list_vacancies(session, timetable_mode_name, city_name)
+
 @router.get("/", response_model=List[VacancyRead])
 async def list_vacancies_endpoint(
     timetable_mode_name: Optional[str] = None,
-    city: Optional[str] = None,
+    city_name: Optional[str] = None,  # Поменяли 'city' на 'city_name'
     session: AsyncSession = Depends(get_session),
 ) -> List[VacancyRead]:
-    return await list_vacancies(session, timetable_mode_name, city)
+    # Теперь передаем явно по имени для надежности
+    return await list_vacancies(
+        session=session,
+        timetable_mode_name=timetable_mode_name,
+        city_name=city_name
+    )
 
 
 @router.get("/{vacancy_id}", response_model=VacancyRead)
@@ -56,7 +69,9 @@ async def create_vacancy_endpoint(
     return await create_vacancy(session, payload)
 
 
-@router.put("/{vacancy_id}", response_model=VacancyRead)
+
+
+@router.put("/{vacancy_id}", response_model=VacancyRead, status_code=status.HTTP_200_OK)
 async def update_vacancy_endpoint(
     vacancy_id: int,
     payload: VacancyUpdate,

@@ -3,7 +3,6 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
-
 class VacancyBase(BaseModel):
     title: str
     timetable_mode_name: str
@@ -13,6 +12,14 @@ class VacancyBase(BaseModel):
     is_remote_available: bool
     is_hot: bool
     external_id: Optional[int] = None
+
+    model_config = ConfigDict(
+        json_encoders={
+            datetime: lambda dt: dt.strftime('%Y-%m-%d %H:%M:%S')
+        }
+    )
+
+
 
 
 class VacancyCreate(VacancyBase):
@@ -28,3 +35,5 @@ class VacancyRead(VacancyBase):
 
     id: int
     created_at: datetime
+
+
